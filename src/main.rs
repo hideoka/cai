@@ -1,3 +1,4 @@
+use cai::parse_config_file;
 use clap::{App, Arg};
 use std::env;
 use std::error::Error;
@@ -32,13 +33,19 @@ fn run() -> Result<(), Box<dyn Error>> {
     let args = matches.values_of("args").map(|a| a.collect::<Vec<_>>());
     let cmd = Cmd::new(command, args);
 
-    if let Some(args) = cmd.args {
-        Command::new("bash")
-            .arg("-c")
-            .arg(format!("{:?} {:?}", cmd.command, args.join(" ")))
-            .spawn()?;
-    } else {
-        Command::new("bash").arg("-c").arg(cmd.command).spawn()?;
+    let cmd_list = parse_config_file("./cai_config.json")?;
+    match cmd_list.get(cmd.command) {
+        Some(match_cmd) => {
+            if let Some(args) = cmd.args {
+                Command::new("bash")
+                    .arg("-c")
+                    .arg(format!("{:?} {:?}", match_cmd, args.join(" ")))
+                    .spawn()?;
+            } else {
+                Command::new("bash").arg("-c").arg(match_cmd).spawn()?;
+            }
+        }
+        None => eprintln!("Command not found"),
     }
     Ok(())
 }
