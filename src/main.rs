@@ -10,11 +10,13 @@ fn run(args: Vec<String>) -> Result<()> {
     let matches = build_matches(args);
     if let Some("init") = matches.value_of("command") {
         build_cinfig_file()?;
-    } else {
-        let cmd_list = parse_config_file("./cai_config.json")?;
-        let cmd = build_cmd(matches, cmd_list)?;
-        Command::new("bash").arg("-c").arg(cmd).spawn()?;
+        return Ok(());
     }
+
+    let cmd_list = parse_config_file("./cai_config.json")?;
+    let cmd = build_cmd(matches, cmd_list)?;
+    let mut child = Command::new("bash").arg("-c").arg(cmd).spawn()?;
+    child.wait()?;
     Ok(())
 }
 
