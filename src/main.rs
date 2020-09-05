@@ -1,10 +1,8 @@
+use anyhow::Result;
 use cai::{build_cinfig_file, build_cmd, build_matches, parse_config_file};
 use std::env;
-use std::error::Error;
 use std::process;
 use std::process::Command;
-
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 fn run(args: Vec<String>) -> Result<()> {
     let matches = build_matches(args);

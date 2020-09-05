@@ -1,26 +1,9 @@
-use clap::{App, Arg, ArgMatches};
+use anyhow::{anyhow, Result};
+use clap::{crate_authors, crate_name, crate_version, App, Arg, ArgMatches};
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
-
-#[derive(Debug)]
-struct NotFoundCmd;
-
-impl fmt::Display for NotFoundCmd {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Not found commnad key")
-    }
-}
-
-impl Error for NotFoundCmd {}
-
-#[macro_use]
-extern crate clap;
 
 pub fn parse_config_file<P: AsRef<Path>>(path: P) -> Result<HashMap<String, String>> {
     let mut file = File::open(path)?;
@@ -69,7 +52,7 @@ pub fn build_cmd(matches: ArgMatches, cmd_list: HashMap<String, String>) -> Resu
                 Ok(match_cmd.to_string())
             }
         }
-        None => Err(NotFoundCmd)?,
+        None => Err(anyhow!("Not found command key"))?,
     }
 }
 
