@@ -1,17 +1,8 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{crate_authors, crate_name, crate_version, App, Arg, ArgMatches};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::Path;
-
-pub fn parse_config_file<P: AsRef<Path>>(path: P) -> Result<HashMap<String, String>> {
-    let mut file = File::open(path)?;
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-    let cmd_list = serde_json::from_str::<HashMap<String, String>>(&content)?;
-    Ok(cmd_list)
-}
 
 pub fn build_cinfig_file() -> Result<()> {
     let mut file = File::create("cai_config.json")?;
@@ -41,7 +32,9 @@ pub fn build_matches(args: Vec<String>) -> ArgMatches<'static> {
 }
 
 pub fn build_cmd(matches: ArgMatches, cmd_list: HashMap<String, String>) -> Result<String> {
-    let command = matches.value_of("command").unwrap();
+    let command = matches
+        .value_of("command")
+        .context("Command argument not found")?;
     let args = matches.values_of("args").map(|a| a.collect::<Vec<_>>());
     let cmd = Cmd::new(command, args);
     match cmd_list.get(cmd.command) {
@@ -59,20 +52,6 @@ pub fn build_cmd(matches: ArgMatches, cmd_list: HashMap<String, String>) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parse_config_file_test() {
-        let result: HashMap<String, String> = vec![
-            ("foo".to_string(), "ls".to_string()),
-            ("bar".to_string(), "type".to_string()),
-        ]
-        .into_iter()
-        .collect();
-        assert_eq!(
-            parse_config_file("./example/cai_config.json").unwrap(),
-            result
-        )
-    }
 
     #[test]
     fn build_cmd_test_with_argument() {

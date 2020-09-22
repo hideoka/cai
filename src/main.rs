@@ -1,5 +1,8 @@
+mod command_file;
+
+use crate::command_file::*;
 use anyhow::Result;
-use cai::{build_cinfig_file, build_cmd, build_matches, parse_config_file};
+use cai::{build_cinfig_file, build_cmd, build_matches};
 use std::env;
 use std::process;
 use std::process::Command;
@@ -11,7 +14,11 @@ fn run(args: Vec<String>) -> Result<()> {
         return Ok(());
     }
 
-    let cmd_list = parse_config_file("./cai_config.json")?;
+    let command_file_config = CommandFileConfig::new(
+        env::var("CONFIG_FILE_KIND").ok(),
+        env::var("CONFIG_FILE_PATH").ok(),
+    );
+    let cmd_list = parse_config_file(command_file_config)?;
     let cmd = build_cmd(matches, cmd_list)?;
     let mut child = Command::new("bash").arg("-c").arg(cmd).spawn()?;
     child.wait()?;
