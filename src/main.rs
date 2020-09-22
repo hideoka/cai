@@ -1,6 +1,6 @@
 mod command_file;
 
-use crate::command_file::*;
+use crate::command_file::CommandFileService;
 use anyhow::Result;
 use cai::{build_cinfig_file, build_cmd, build_matches};
 use std::env;
@@ -14,11 +14,11 @@ fn run(args: Vec<String>) -> Result<()> {
         return Ok(());
     }
 
-    let command_file_config = CommandFileConfig::new(
+    let command_file_service = CommandFileService::new(
         env::var("CONFIG_FILE_KIND").ok(),
         env::var("CONFIG_FILE_PATH").ok(),
     );
-    let cmd_list = parse_config_file(command_file_config)?;
+    let cmd_list = command_file_service.parse_config_file()?;
     let cmd = build_cmd(matches, cmd_list)?;
     let mut child = Command::new("bash").arg("-c").arg(cmd).spawn()?;
     child.wait()?;

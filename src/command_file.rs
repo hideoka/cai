@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 
-pub struct CommandFileConfig {
+pub struct CommandFileService {
     kind: CommandFileKind,
     path: Option<String>,
 }
 
-impl CommandFileConfig {
+impl CommandFileService {
     pub fn new(config_file_kind: Option<String>, config_file_path: Option<String>) -> Self {
         let kind = match config_file_kind.as_ref().map(AsRef::as_ref) {
             Some("JSON") => CommandFileKind::Json,
@@ -16,21 +16,22 @@ impl CommandFileConfig {
             _ => CommandFileKind::Json,
         };
         let path = config_file_path;
-        CommandFileConfig { kind, path }
+        CommandFileService { kind, path }
     }
-}
 
-pub fn parse_config_file(config: CommandFileConfig) -> Result<HashMap<String, String>> {
-    let command_file: Box<dyn CommandFile> = match config.kind {
-        CommandFileKind::Json => Box::new(JsonCommandFile::new(config.path)),
-        CommandFileKind::Yaml => Box::new(YamlCommandFile::new(config.path)),
-    };
+    pub fn parse_config_file(&self) -> Result<HashMap<String, String>> {
+        let path = self.path.as_ref().map(AsRef::as_ref);
+        let command_file: Box<dyn CommandFile> = match self.kind {
+            CommandFileKind::Json => Box::new(JsonCommandFile::new(path)),
+            CommandFileKind::Yaml => Box::new(YamlCommandFile::new(path)),
+        };
 
-    let mut file = File::open(command_file.path())?;
-    let mut content = String::new();
-    file.read_to_string(&mut content)?;
-    let cmd_list = command_file.parse(content)?;
-    Ok(cmd_list)
+        let mut file = File::open(command_file.path())?;
+        let mut content = String::new();
+        file.read_to_string(&mut content)?;
+        let cmd_list = command_file.parse(content)?;
+        Ok(cmd_list)
+    }
 }
 
 enum CommandFileKind {
@@ -38,12 +39,12 @@ enum CommandFileKind {
     Yaml,
 }
 
-struct JsonCommandFile {
-    path: String,
+struct JsonCommandFile<'a> {
+    path: &'a str,
 }
 
-struct YamlCommandFile {
-    path: String,
+struct YamlCommandFile<'a> {
+    path: &'a str,
 }
 
 trait CommandFile {
@@ -51,14 +52,14 @@ trait CommandFile {
     fn path(&self) -> &str;
 }
 
-impl JsonCommandFile {
-    fn new(path: Option<String>) -> Self {
-        let file_path = path.unwrap_or("./cai_config.json".to_string());
+impl<'a> JsonCommandFile<'a> {
+    fn new(path: Option<&'a str>) -> Self {
+        let file_path = path.unwrap_or("./cai_config.json");
         JsonCommandFile { path: file_path }
     }
 }
 
-impl CommandFile for JsonCommandFile {
+impl<'a> CommandFile for JsonCommandFile<'a> {
     fn parse(&self, content: String) -> Result<HashMap<String, String>> {
         let cmd_list = serde_yaml::from_str::<HashMap<String, String>>(&content)?;
         Ok(cmd_list)
@@ -68,14 +69,14 @@ impl CommandFile for JsonCommandFile {
     }
 }
 
-impl YamlCommandFile {
-    fn new(path: Option<String>) -> Self {
-        let file_path = path.unwrap_or("./cai_config.yaml".to_string());
+impl<'a> YamlCommandFile<'a> {
+    fn new(path: Option<&'a str>) -> Self {
+        let file_path = path.unwrap_or("./cai_config.yaml");
         YamlCommandFile { path: file_path }
     }
 }
 
-impl CommandFile for YamlCommandFile {
+impl<'a> CommandFile for YamlCommandFile<'a> {
     fn parse(&self, content: String) -> Result<HashMap<String, String>> {
         let cmd_list = serde_yaml::from_str::<HashMap<String, String>>(&content)?;
         Ok(cmd_list)
@@ -98,8 +99,9 @@ mod tests {
         .into_iter()
         .collect();
 
-        let config = CommandFileConfig::new(None, Some("./example/cai_config.json".to_string()));
-        assert_eq!(parse_config_file(config).unwrap(), result)
+        let command_file_service =
+            CommandFileService::new(None, Some("./example/cai_config.json".to_string()));
+        assert_eq!(command_file_service.parse_config_file().unwrap(), result)
     }
 
     #[test]
@@ -111,7 +113,8 @@ mod tests {
         .into_iter()
         .collect();
 
-        let config = CommandFileConfig::new(None, Some("./example/cai_config.yaml".to_string()));
-        assert_eq!(parse_config_file(config).unwrap(), result)
+        let command_file_service =
+            CommandFileService::new(None, Some("./example/cai_config.yaml".to_string()));
+        assert_eq!(command_file_service.parse_config_file().unwrap(), result)
     }
 }
