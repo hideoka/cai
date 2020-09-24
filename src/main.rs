@@ -1,8 +1,9 @@
+mod build_cmd;
 mod command_file;
 
+use crate::build_cmd::*;
 use crate::command_file::CommandFileService;
 use anyhow::Result;
-use cai::{build_cinfig_file, build_cmd, build_matches};
 use std::env;
 use std::process;
 use std::process::Command;
@@ -10,7 +11,7 @@ use std::process::Command;
 fn run(args: Vec<String>) -> Result<()> {
     let matches = build_matches(args);
     if let Some("init") = matches.value_of("command") {
-        build_cinfig_file()?;
+        build_config_file()?;
         return Ok(());
     }
 
