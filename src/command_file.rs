@@ -1,3 +1,4 @@
+use crate::EnvConfig;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::fs::File;
@@ -9,13 +10,13 @@ pub struct CommandFileService {
 }
 
 impl CommandFileService {
-    pub fn new(config_file_kind: Option<String>, config_file_path: Option<String>) -> Self {
-        let kind = match config_file_kind.as_ref().map(AsRef::as_ref) {
+    pub fn new(env_config: EnvConfig) -> Self {
+        let kind = match env_config.file_kind.as_ref().map(AsRef::as_ref) {
             Some("JSON") => CommandFileKind::Json,
             Some("YAML") => CommandFileKind::Yaml,
             _ => CommandFileKind::Json,
         };
-        let path = config_file_path;
+        let path = env_config.file_path;
         CommandFileService { kind, path }
     }
 
@@ -61,7 +62,7 @@ impl<'a> JsonCommandFile<'a> {
 
 impl<'a> CommandFile for JsonCommandFile<'a> {
     fn parse(&self, content: String) -> Result<HashMap<String, String>> {
-        let cmd_list = serde_yaml::from_str::<HashMap<String, String>>(&content)?;
+        let cmd_list = serde_json::from_str::<HashMap<String, String>>(&content)?;
         Ok(cmd_list)
     }
     fn path(&self) -> &str {
@@ -99,8 +100,12 @@ mod tests {
         .into_iter()
         .collect();
 
-        let command_file_service =
-            CommandFileService::new(None, Some("./example/cai_config.json".to_string()));
+        let env_config = EnvConfig {
+            file_kind: Some("JSON".to_string()),
+            file_path: Some("./example/cai_config.json".to_string()),
+        };
+
+        let command_file_service = CommandFileService::new(env_config);
         assert_eq!(command_file_service.parse_config_file().unwrap(), result)
     }
 
@@ -108,13 +113,35 @@ mod tests {
     fn parse_yaml_config_file_test() {
         let result: HashMap<String, String> = vec![
             ("foo".to_string(), "ls".to_string()),
+            ("bar".to_string(), "cat".to_string()),
+        ]
+        .into_iter()
+        .collect();
+
+        let env_config = EnvConfig {
+            file_kind: Some("YAML".to_string()),
+            file_path: Some("./example/cai_config.yaml".to_string()),
+        };
+
+        let command_file_service = CommandFileService::new(env_config);
+        assert_eq!(command_file_service.parse_config_file().unwrap(), result)
+    }
+
+    #[test]
+    fn parse_json_config_file_test_without_file_kind_env() {
+        let result: HashMap<String, String> = vec![
+            ("foo".to_string(), "ls".to_string()),
             ("bar".to_string(), "type".to_string()),
         ]
         .into_iter()
         .collect();
 
-        let command_file_service =
-            CommandFileService::new(None, Some("./example/cai_config.yaml".to_string()));
+        let env_config = EnvConfig {
+            file_kind: None,
+            file_path: Some("./example/cai_config.json".to_string()),
+        };
+
+        let command_file_service = CommandFileService::new(env_config);
         assert_eq!(command_file_service.parse_config_file().unwrap(), result)
     }
 }
